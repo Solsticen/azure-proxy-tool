@@ -292,11 +292,16 @@ if ! [[ "$QUANTITY" =~ ^[0-9]+$ ]] || [[ "$QUANTITY" -lt 1 ]]; then
   exit 1
 fi
 
-echo "[+] Creating/checking resource group: $RESOURCE_GROUP / $REGION"
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$REGION" \
-  -o table
+echo "[+] Checking Resource Group: $RESOURCE_GROUP / $REGION"
+if az group exists -n "$RESOURCE_GROUP" | grep -q "true"; then
+  echo "    Resource group '$RESOURCE_GROUP' already exists. Using it."
+else
+  echo "    Creating new Resource Group: $RESOURCE_GROUP in $REGION"
+  az group create \
+    --name "$RESOURCE_GROUP" \
+    --location "$REGION" \
+    -o table
+fi
 
 if [[ ! -f "$CLOUD_INIT_FILE" ]]; then
   bash ./02_make_cloud_init.sh
@@ -832,7 +837,8 @@ while true; do
       echo "  4) East Asia     (eastasia     - Hong Kong)"
       echo "  5) Korea Central (koreacentral - Seoul)"
       echo "  6) West US 3     (westus3      - Phoenix)"
-      read_m "Chọn region [1-6]: " "2" NEW_REG_C
+      echo "  7) Custom Region (Nhập thủ công)"
+      read_m "Chọn region [1-7]: " "2" NEW_REG_C
       case "$NEW_REG_C" in
         1) REGION="japaneast"; VM_PREFIX="proxy-jpe" ;;
         2) REGION="japanwest"; VM_PREFIX="proxy-jpw" ;;
@@ -840,6 +846,10 @@ while true; do
         4) REGION="eastasia"; VM_PREFIX="proxy-ea" ;;
         5) REGION="koreacentral"; VM_PREFIX="proxy-krc" ;;
         6) REGION="westus3"; VM_PREFIX="proxy-wus3" ;;
+        7)
+          read_m "Nhập Azure Region (vd: japaneast, centralus, westeurope): " "japanwest" REGION
+          read_m "Nhập Prefix tên VM (vd: proxy-cust): " "proxy-vm" VM_PREFIX
+          ;;
       esac
       sed -i "s/^REGION=.*/REGION=\"$REGION\"/" 00_config.sh
       sed -i "s/^VM_PREFIX=.*/VM_PREFIX=\"$VM_PREFIX\"/" 00_config.sh
